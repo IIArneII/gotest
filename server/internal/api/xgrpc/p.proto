@@ -1,0 +1,36 @@
+syntax = "proto3";
+
+package xgrpc;
+
+option go_package = "./xgrpc";
+
+service TestService{
+    rpc VerifyClient(Verify) returns(VerifyAnswer);
+    rpc SendMessage(Message) returns(MessageAnswer);
+    rpc SendMessageToOtherClient(MessageToOther) returns(MessageToOtherAnswer);
+}
+
+message Verify{
+    string uuid = 1;
+}
+
+message VerifyAnswer{
+    bool success = 1;
+}
+
+message Message{
+    string msg = 1;
+}
+
+message MessageAnswer{
+    string msg = 1;
+}
+
+message MessageToOther{
+    string uuid = 1;
+    string msg = 2;
+}
+
+message MessageToOtherAnswer{
+    bool success = 1;
+}
