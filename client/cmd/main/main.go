@@ -6,7 +6,7 @@ import (
 	"log"
 	"time"
 
-	"gtest/client/internal/api/xgrpc"
+	"test-client/internal/api/xgrpc"
 
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"

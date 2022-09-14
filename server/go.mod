@@ -1,4 +1,4 @@
-module gtest
+module test-server
 
 go 1.17
 

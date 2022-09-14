@@ -1,0 +1,77 @@
+swagger: "2.0"
+info:
+  description: "test grpc client"
+  title: test-client
+  version: 1.0.0
+schemes:
+  - http
+consumes:
+  - application/json
+produces:
+  - application/json
+
+paths:
+  /set-api-key:
+    post:
+      operationId: setApiKey
+      parameters:
+        - name: body
+          in: body
+          schema:
+            $ref: "#/definitions/uuid"
+      responses:
+        200:
+          description: "Ok"
+        default:
+          description: error
+          schema:
+            $ref: "#/definitions/error"
+  /send-message:
+    post:
+      operationId: sendMessage
+      parameters:
+        - name: body
+          in: body
+          schema:
+            $ref: "#/definitions/sendMessage"
+      responses:
+        200:
+          description: "Ok"
+        default:
+          description: error
+          schema:
+            $ref: "#/definitions/error"
+
+definitions:
+  error:
+    type: object
+    required:
+      - code
+      - message
+    properties:
+      code:
+        description: Either same as HTTP Status Code OR >= 600.
+        type: integer
+        format: int32
+      message:
+        type: string
+
+  uuid:
+    type: object
+    description: "uuid object"
+    required:
+      - uuid
+    properties:
+      uuid:
+        type: "string"
+
+  sendMessage:
+    type: object
+    description: "send message object"
+    required:
+      - message
+    properties:
+      uuid:
+        type: "string"
+      message:
+        type: "string"
