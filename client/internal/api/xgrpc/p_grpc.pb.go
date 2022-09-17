@@ -23,8 +23,8 @@ const _ = grpc.SupportPackageIsVersion7
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type TestServiceClient interface {
 	VerifyClient(ctx context.Context, in *Verify, opts ...grpc.CallOption) (*VerifyAnswer, error)
-	SendMessage(ctx context.Context, in *Message, opts ...grpc.CallOption) (*MessageAnswer, error)
-	SendMessageToOtherClient(ctx context.Context, in *MessageToOther, opts ...grpc.CallOption) (*MessageToOtherAnswer, error)
+	SendMessage(ctx context.Context, opts ...grpc.CallOption) (TestService_SendMessageClient, error)
+	SendMessageToOtherClient(ctx context.Context, opts ...grpc.CallOption) (TestService_SendMessageToOtherClientClient, error)
 }
 
 type testServiceClient struct {
@@ -44,22 +44,66 @@ func (c *testServiceClient) VerifyClient(ctx context.Context, in *Verify, opts .
 	return out, nil
 }
 
-func (c *testServiceClient) SendMessage(ctx context.Context, in *Message, opts ...grpc.CallOption) (*MessageAnswer, error) {
-	out := new(MessageAnswer)
-	err := c.cc.Invoke(ctx, "/xgrpc.TestService/SendMessage", in, out, opts...)
+func (c *testServiceClient) SendMessage(ctx context.Context, opts ...grpc.CallOption) (TestService_SendMessageClient, error) {
+	stream, err := c.cc.NewStream(ctx, &TestService_ServiceDesc.Streams[0], "/xgrpc.TestService/SendMessage", opts...)
 	if err != nil {
 		return nil, err
 	}
-	return out, nil
+	x := &testServiceSendMessageClient{stream}
+	return x, nil
 }
 
-func (c *testServiceClient) SendMessageToOtherClient(ctx context.Context, in *MessageToOther, opts ...grpc.CallOption) (*MessageToOtherAnswer, error) {
-	out := new(MessageToOtherAnswer)
-	err := c.cc.Invoke(ctx, "/xgrpc.TestService/SendMessageToOtherClient", in, out, opts...)
+type TestService_SendMessageClient interface {
+	Send(*Message) error
+	Recv() (*MessageAnswer, error)
+	grpc.ClientStream
+}
+
+type testServiceSendMessageClient struct {
+	grpc.ClientStream
+}
+
+func (x *testServiceSendMessageClient) Send(m *Message) error {
+	return x.ClientStream.SendMsg(m)
+}
+
+func (x *testServiceSendMessageClient) Recv() (*MessageAnswer, error) {
+	m := new(MessageAnswer)
+	if err := x.ClientStream.RecvMsg(m); err != nil {
+		return nil, err
+	}
+	return m, nil
+}
+
+func (c *testServiceClient) SendMessageToOtherClient(ctx context.Context, opts ...grpc.CallOption) (TestService_SendMessageToOtherClientClient, error) {
+	stream, err := c.cc.NewStream(ctx, &TestService_ServiceDesc.Streams[1], "/xgrpc.TestService/SendMessageToOtherClient", opts...)
 	if err != nil {
 		return nil, err
 	}
-	return out, nil
+	x := &testServiceSendMessageToOtherClientClient{stream}
+	return x, nil
+}
+
+type TestService_SendMessageToOtherClientClient interface {
+	Send(*MessageToOther) error
+	Recv() (*MessageToOtherAnswer, error)
+	grpc.ClientStream
+}
+
+type testServiceSendMessageToOtherClientClient struct {
+	grpc.ClientStream
+}
+
+func (x *testServiceSendMessageToOtherClientClient) Send(m *MessageToOther) error {
+	return x.ClientStream.SendMsg(m)
+}
+
+func (x *testServiceSendMessageToOtherClientClient) Recv() (*MessageToOtherAnswer, error) {
+	m := new(MessageToOtherAnswer)
+	if err := x.ClientStream.RecvMsg(m); err != nil {
+		return nil, err
+	}
+	return m, nil
 }
 
 // TestServiceServer is the server API for TestService service.
@@ -67,8 +111,8 @@ func (c *testServiceClient) SendMessageToOtherClient(ctx context.Context, in *Me
 // for forward compatibility
 type TestServiceServer interface {
 	VerifyClient(context.Context, *Verify) (*VerifyAnswer, error)
-	SendMessage(context.Context, *Message) (*MessageAnswer, error)
-	SendMessageToOtherClient(context.Context, *MessageToOther) (*MessageToOtherAnswer, error)
+	SendMessage(TestService_SendMessageServer) error
+	SendMessageToOtherClient(TestService_SendMessageToOtherClientServer) error
 	mustEmbedUnimplementedTestServiceServer()
 }
 
@@ -79,11 +123,11 @@ type UnimplementedTestServiceServer struct {
 func (UnimplementedTestServiceServer) VerifyClient(context.Context, *Verify) (*VerifyAnswer, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method VerifyClient not implemented")
 }
-func (UnimplementedTestServiceServer) SendMessage(context.Context, *Message) (*MessageAnswer, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method SendMessage not implemented")
+func (UnimplementedTestServiceServer) SendMessage(TestService_SendMessageServer) error {
+	return status.Errorf(codes.Unimplemented, "method SendMessage not implemented")
 }
-func (UnimplementedTestServiceServer) SendMessageToOtherClient(context.Context, *MessageToOther) (*MessageToOtherAnswer, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method SendMessageToOtherClient not implemented")
+func (UnimplementedTestServiceServer) SendMessageToOtherClient(TestService_SendMessageToOtherClientServer) error {
+	return status.Errorf(codes.Unimplemented, "method SendMessageToOtherClient not implemented")
 }
 func (UnimplementedTestServiceServer) mustEmbedUnimplementedTestServiceServer() {}
 
@@ -116,40 +160,56 @@ func _TestService_VerifyClient_Handler(srv interface{}, ctx context.Context, dec
 	return interceptor(ctx, in, info, handler)
 }
 
-func _TestService_SendMessage_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(Message)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(TestServiceServer).SendMessage(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: "/xgrpc.TestService/SendMessage",
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(TestServiceServer).SendMessage(ctx, req.(*Message))
-	}
-	return interceptor(ctx, in, info, handler)
+func _TestService_SendMessage_Handler(srv interface{}, stream grpc.ServerStream) error {
+	return srv.(TestServiceServer).SendMessage(&testServiceSendMessageServer{stream})
 }
 
-func _TestService_SendMessageToOtherClient_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(MessageToOther)
-	if err := dec(in); err != nil {
+type TestService_SendMessageServer interface {
+	Send(*MessageAnswer) error
+	Recv() (*Message, error)
+	grpc.ServerStream
+}
+
+type testServiceSendMessageServer struct {
+	grpc.ServerStream
+}
+
+func (x *testServiceSendMessageServer) Send(m *MessageAnswer) error {
+	return x.ServerStream.SendMsg(m)
+}
+
+func (x *testServiceSendMessageServer) Recv() (*Message, error) {
+	m := new(Message)
+	if err := x.ServerStream.RecvMsg(m); err != nil {
 		return nil, err
 	}
-	if interceptor == nil {
-		return srv.(TestServiceServer).SendMessageToOtherClient(ctx, in)
+	return m, nil
+}
+
+func _TestService_SendMessageToOtherClient_Handler(srv interface{}, stream grpc.ServerStream) error {
+	return srv.(TestServiceServer).SendMessageToOtherClient(&testServiceSendMessageToOtherClientServer{stream})
+}
+
+type TestService_SendMessageToOtherClientServer interface {
+	Send(*MessageToOtherAnswer) error
+	Recv() (*MessageToOther, error)
+	grpc.ServerStream
+}
+
+type testServiceSendMessageToOtherClientServer struct {
+	grpc.ServerStream
+}
+
+func (x *testServiceSendMessageToOtherClientServer) Send(m *MessageToOtherAnswer) error {
+	return x.ServerStream.SendMsg(m)
+}
+
+func (x *testServiceSendMessageToOtherClientServer) Recv() (*MessageToOther, error) {
+	m := new(MessageToOther)
+	if err := x.ServerStream.RecvMsg(m); err != nil {
+		return nil, err
 	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: "/xgrpc.TestService/SendMessageToOtherClient",
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(TestServiceServer).SendMessageToOtherClient(ctx, req.(*MessageToOther))
-	}
-	return interceptor(ctx, in, info, handler)
+	return m, nil
 }
 
 // TestService_ServiceDesc is the grpc.ServiceDesc for TestService service.
@@ -163,15 +223,20 @@ var TestService_ServiceDesc = grpc.ServiceDesc{
 			MethodName: "VerifyClient",
 			Handler:    _TestService_VerifyClient_Handler,
 		},
+	},
+	Streams: []grpc.StreamDesc{
 		{
-			MethodName: "SendMessage",
-			Handler:    _TestService_SendMessage_Handler,
+			StreamName:    "SendMessage",
+			Handler:       _TestService_SendMessage_Handler,
+			ServerStreams: true,
+			ClientStreams: true,
 		},
 		{
-			MethodName: "SendMessageToOtherClient",
-			Handler:    _TestService_SendMessageToOtherClient_Handler,
+			StreamName:    "SendMessageToOtherClient",
+			Handler:       _TestService_SendMessageToOtherClient_Handler,
+			ServerStreams: true,
+			ClientStreams: true,
 		},
 	},
-	Streams:  []grpc.StreamDesc{},
 	Metadata: "internal/api/xgrpc/p.proto",
 }

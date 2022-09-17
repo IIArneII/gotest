@@ -6,8 +6,8 @@ option go_package = "./xgrpc";
 
 service TestService{
     rpc VerifyClient(Verify) returns(VerifyAnswer);
-    rpc SendMessage(Message) returns(MessageAnswer);
-    rpc SendMessageToOtherClient(MessageToOther) returns(MessageToOtherAnswer);
+    rpc SendMessage(stream Message) returns(stream MessageAnswer);
+    rpc SendMessageToOtherClient(stream MessageToOther) returns(stream MessageToOtherAnswer);
 }
 
 message Verify{
@@ -19,7 +19,8 @@ message VerifyAnswer{
 }
 
 message Message{
-    string msg = 1;
+    string uuid = 1;
+    string msg = 2;
 }
 
 message MessageAnswer{
@@ -28,7 +29,8 @@ message MessageAnswer{
 
 message MessageToOther{
     string uuid = 1;
-    string msg = 2;
+    string targetUuid = 2;
+    string msg = 3;
 }
 
 message MessageToOtherAnswer{
