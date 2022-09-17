@@ -17,7 +17,7 @@ func RunGRPCServer(errc chan<- error, app *app.App) {
 
 	server := grpc.NewServer()
 
-	xgrpc.RegisterTestServiceServer(server, xgrpc.New(app))
+	xgrpc.RegisterTestServiceServer(server, xgrpc.New(&xgrpc.App{Clients: app.Clients}))
 
 	l, err := net.Listen("tcp", ":8080")
 	if err != nil {
@@ -47,7 +47,7 @@ func main() {
 	log.Println("Run program")
 
 	app := &app.App{
-		Clients: make(map[string]app.Client),
+		Clients: make(map[string]xgrpc.Client),
 	}
 
 	errc := make(chan error)

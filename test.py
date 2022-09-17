@@ -8,7 +8,7 @@ if __name__ == '__main__':
     server_port = 8081
     clients = {}
 
-    print('0. Выоход\n1. Добавить клиент\n2.Список клиентов\n3.Запросить ключ и установить клиенту\n')
+    print('0. Выоход\n1. Добавить клиент\n2.Список клиентов\n3.Запросить ключ и установить клиенту\n4. Отправить сообщение\n')
 
     while ((choose := int(input('Чо делать: '))) != 0):
         if choose == 0:
@@ -27,3 +27,12 @@ if __name__ == '__main__':
                     clients[port]['key'] = json['uuid']
             except Exception as e:
                 print('Error: ', e)
+        if choose == 4:
+            try:
+                resp = requests.post(f"http://localhost:{int(port:=input('Порт: '))}/send-message", json={
+                    'uuid': clients[input('Кому: ')]['key'],
+                    'message': input('Сообщение: ')
+                    })
+            except Exception as e:
+                print('Error: ', e)
+
